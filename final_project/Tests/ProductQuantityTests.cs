@@ -1,4 +1,5 @@
-using LambdatestEcom;
+using final_project;
+using final_project.Pages;
 using Microsoft.Playwright;
 
 namespace final_project.Tests
@@ -9,13 +10,19 @@ namespace final_project.Tests
         [Test]
         public async Task ProductQuantityTest()
         {
-            await page.GotoAsync("https://automationexercise.com/");
-            await page.GetByLabel("Consent", new() { Exact = true }).ClickAsync();
-            await page.Locator(".choose").First.ClickAsync();
-            await page.Locator("#quantity").FillAsync("4");
-            await page.GetByRole(AriaRole.Button, new() { Name = "Add to cart" }).ClickAsync();
-            await page.GetByRole(AriaRole.Link, new() { Name = "View Cart" }).ClickAsync();
-            await Assertions.Expect(page.Locator("#product-1")).ToContainTextAsync("4");
+            //Arrange
+            var homePage = new HomePage(page);
+            var productPage = new ProductPage(page);
+            var cartPage = new CartPage(page);
+
+            //Act
+            await homePage.OpenFirstProduct();
+            await productPage.FillProductQuantity(4);
+            await productPage.ClickAddToCart();
+            await homePage.ClickViewCart();
+
+            //Assert
+            await Assertions.Expect(cartPage.GetFirstProductLocator()).ToContainTextAsync("4");
         }
 
     }

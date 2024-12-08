@@ -1,4 +1,5 @@
-using LambdatestEcom;
+using final_project;
+using final_project.Pages;
 using Microsoft.Playwright;
 
 namespace final_project.Tests
@@ -9,13 +10,18 @@ namespace final_project.Tests
         [Test]
         public async Task SearchProductTest()
         {
-            await page.GotoAsync("https://automationexercise.com/");
-            await page.GetByLabel("Consent", new() { Exact = true }).ClickAsync();
-            await page.GetByRole(AriaRole.Link, new() { Name = "Products" }).ClickAsync();
-            await page.GetByPlaceholder("Search Product").FillAsync("Winter Top");
-            await page.Locator("//button[@id='submit_search']").ClickAsync();
-            await Assertions.Expect(page.Locator(".productinfo")).ToBeVisibleAsync();
-            await Assertions.Expect(page.Locator(".productinfo")).ToContainTextAsync("Winter Top");
+            //Arrange
+            var homePage = new HomePage(page);
+            var productName = "Winter Top";
+
+            //Act
+            await homePage.OpenProductsPage();
+            await homePage.SearchProduct(productName);
+
+            //Assert
+            await Assertions.Expect(homePage.GetFirstProductInfoLocator()).ToBeVisibleAsync();
+            await Assertions.Expect(homePage.GetFirstProductInfoLocator()).ToHaveCountAsync(1);
+            await Assertions.Expect(homePage.GetFirstProductInfoLocator()).ToContainTextAsync(productName);
         }
 
     }
