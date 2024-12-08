@@ -1,4 +1,5 @@
-using LambdatestEcom;
+using final_project;
+using final_project.Pages;
 using Microsoft.Playwright;
 
 namespace final_project.Tests
@@ -9,15 +10,22 @@ namespace final_project.Tests
         [Test]
         public async Task ProductDetailTest()
         {
-            await page.GotoAsync("https://automationexercise.com/");
-            await page.GetByLabel("Consent", new() { Exact = true }).ClickAsync();
-            await page.GetByRole(AriaRole.Link, new() { Name = "Products" }).ClickAsync();
-            await page.Locator(".choose").First.ClickAsync();
-            await Assertions.Expect(page.Locator("section")).ToContainTextAsync("Blue Top");
-            await Assertions.Expect(page.Locator("section")).ToContainTextAsync("Category:");
-            await Assertions.Expect(page.Locator("section")).ToContainTextAsync("Rs.");
-            await Assertions.Expect(page.Locator("section")).ToContainTextAsync("Availability:");
-            await Assertions.Expect(page.Locator("section")).ToContainTextAsync("Brand:");
+            //Arrange
+            var homePage = new HomePage(page);
+            var productPage = new ProductPage(page);
+
+            //Act
+            await homePage.OpenProductsPage();
+            var productName = await homePage.GetNameOfFirstProduct();
+            var productPrice = await homePage.GetPriceOfFirstProduct();
+            await homePage.OpenFirstProduct();
+
+            //Assert
+            await Assertions.Expect(productPage.GetProductInfoLocator()).ToContainTextAsync(productName);
+            await Assertions.Expect(productPage.GetProductInfoLocator()).ToContainTextAsync("Category:");
+            await Assertions.Expect(productPage.GetProductInfoLocator()).ToContainTextAsync(productPrice);
+            await Assertions.Expect(productPage.GetProductInfoLocator()).ToContainTextAsync("Availability:");
+            await Assertions.Expect(productPage.GetProductInfoLocator()).ToContainTextAsync("Brand:");
         }
 
     }

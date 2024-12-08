@@ -1,4 +1,5 @@
-using LambdatestEcom;
+using final_project;
+using final_project.Pages;
 using Microsoft.Playwright;
 
 namespace final_project.Tests
@@ -9,13 +10,17 @@ namespace final_project.Tests
         [Test]
         public async Task DeleteProductFromCartTest()
         {
-            await page.GotoAsync("https://automationexercise.com/");
-            await page.GetByLabel("Consent", new() { Exact = true }).ClickAsync();
-            await page.Locator("//*[@class='single-products']//a").First.HoverAsync();
-            await page.Locator("//*[@class='single-products']//a").First.ClickAsync();
-            await page.GetByRole(AriaRole.Link, new() { Name = "View Cart" }).ClickAsync();
-            await page.Locator(".cart_quantity_delete").ClickAsync();
-            await Assertions.Expect(page.Locator("#cart_info")).ToContainTextAsync("Cart is empty! Click here to buy products.");
+            //Arrange
+            var homePage = new HomePage(page);
+            var cartPage = new CartPage(page);
+
+            //Act
+            await homePage.AddFirstProductToCart();
+            await homePage.ClickViewCart();
+            await cartPage.DeleteProductFromCart();
+
+            //Assert
+            await Assertions.Expect(cartPage.GetCartInfoLocator()).ToContainTextAsync("Cart is empty! Click here to buy products.");
         }
 
     }
