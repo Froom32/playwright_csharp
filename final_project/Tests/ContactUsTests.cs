@@ -31,6 +31,7 @@ namespace final_project.Tests
             //Assert
             await Assertions.Expect(contactUsPage.GetContactInfoLocator()).ToContainTextAsync("Success! Your details have been submitted successfully.");
             await contactUsPage.ClickSuccessButton();
+            await Assertions.Expect(page.Locator(".features_items")).ToContainTextAsync("Features Items");
             StringAssert.EndsWith(homePage.homePageURL, page.Url);
         }
     }
