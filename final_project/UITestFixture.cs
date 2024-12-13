@@ -7,7 +7,8 @@ namespace final_project
     {
         public IPage page { get; private set; }
         private IBrowser browser;
-        public IBrowserContext context;
+        public IBrowserContext oneTimeContext;
+        public IBrowserContext uiContext;
         public string email = "testemailfor126@gmail.com";
         public string password = "1234test";
 
@@ -17,13 +18,10 @@ namespace final_project
             var playwrightDriver = await Playwright.CreateAsync();
             browser = await playwrightDriver.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
             {
-                Headless = true
+                Headless = false
             });
-            context = await browser.NewContextAsync();
-            page = await context.NewPageAsync();
-
-            var homePage = new HomePage(page);
-            var createAccountBody = context.APIRequest.CreateFormData();
+            oneTimeContext = await browser.NewContextAsync();
+            var createAccountBody = oneTimeContext.APIRequest.CreateFormData();
             createAccountBody.Append("name", "testName");
             createAccountBody.Append("email", email);
             createAccountBody.Append("password", password);
@@ -41,21 +39,13 @@ namespace final_project
             createAccountBody.Append("state", "testState");
             createAccountBody.Append("city", "testCity");
             createAccountBody.Append("mobile_number", "1234567890");
-            await homePage.Open();
-            await homePage.AcceptDataPolicy();
-            await page.APIRequest.PostAsync("https://automationexercise.com/api/createAccount",
+            await oneTimeContext.APIRequest.PostAsync("https://automationexercise.com/api/createAccount",
                 new() { Form = createAccountBody });
         }
 
         [SetUp]
         public async Task Setup()
         {
-            var playwrightDriver = await Playwright.CreateAsync();
-            browser = await playwrightDriver.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
-            {
-                Headless = false
-            });
-
             string subPath = "../../../playwright/auth";
             string filePath = "../../../playwright/auth/state.json";
 
@@ -69,7 +59,7 @@ namespace final_project
                 File.AppendAllText(filePath, "{}");
             }
 
-            context = await browser.NewContextAsync(new BrowserNewContextOptions
+            uiContext = await browser.NewContextAsync(new BrowserNewContextOptions
             {
                 ViewportSize = new ViewportSize
                 {
@@ -79,7 +69,7 @@ namespace final_project
                 StorageStatePath = "../../../playwright/auth/state.json"
             });
 
-            await context.Tracing.StartAsync(new()
+            await uiContext.Tracing.StartAsync(new()
             {
                 Title = $"{TestContext.CurrentContext.Test.ClassName}.{TestContext.CurrentContext.Test.Name}",
                 Screenshots = true,
@@ -87,7 +77,7 @@ namespace final_project
                 Sources = true
             });
 
-            page = await context.NewPageAsync();
+            page = await uiContext.NewPageAsync();
             var homePage = new HomePage(page);
             await homePage.Open();
             if(await homePage.GetLoginPageLocator().IsVisibleAsync()) 
@@ -95,7 +85,7 @@ namespace final_project
                 await homePage.AcceptDataPolicy();
                 await homePage.Login(email, password);
                 
-                await context.StorageStateAsync(new()
+                await uiContext.StorageStateAsync(new()
                 {
                     Path = "../../../playwright/auth/state.json"
                 });
@@ -106,19 +96,18 @@ namespace final_project
         [OneTimeTearDown]
         public async Task DeleteAccountAndTeardown()
         {
-            var deleteAccountBody = context.APIRequest.CreateFormData();
+            var deleteAccountBody = oneTimeContext.APIRequest.CreateFormData();
             deleteAccountBody.Append("email", email);
             deleteAccountBody.Append("password", password);
-            await page.APIRequest.DeleteAsync("https://automationexercise.com/api/deleteAccount",
+            await oneTimeContext.APIRequest.DeleteAsync("https://automationexercise.com/api/deleteAccount",
                 new() { Form = deleteAccountBody });
-            await page.CloseAsync();
             await browser.CloseAsync();
         }
 
         [TearDown]
         public async Task Teardown()
         {
-            await context.Tracing.StopAsync(new()
+            await uiContext.Tracing.StopAsync(new()
             {
                 Path = Path.Combine(
                 TestContext.CurrentContext.WorkDirectory,
@@ -126,9 +115,7 @@ namespace final_project
                 $"{TestContext.CurrentContext.Test.ClassName}.{TestContext.CurrentContext.Test.Name}.zip"
             )
             });
-
             await page.CloseAsync();
-            await browser.CloseAsync();
         }
     }
 }
