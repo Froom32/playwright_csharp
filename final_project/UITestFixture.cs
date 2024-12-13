@@ -1,39 +1,121 @@
+using final_project.Pages;
 using Microsoft.Playwright;
 
-namespace LambdatestEcom
+namespace final_project
 {
     public class UITestFixture
     {
         public IPage page { get; private set; }
         private IBrowser browser;
-        public IBrowserContext context;
+        public IBrowserContext oneTimeContext;
+        public IBrowserContext uiContext;
+        public string email = "testemailfor126@gmail.com";
+        public string password = "1234test";
 
-        [SetUp]
-        public async Task Setup()
+        [OneTimeSetUp]
+        public async Task OneTimeSetUp()
         {
             var playwrightDriver = await Playwright.CreateAsync();
             browser = await playwrightDriver.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
             {
                 Headless = false
             });
+            oneTimeContext = await browser.NewContextAsync();
+            var createAccountBody = oneTimeContext.APIRequest.CreateFormData();
+            createAccountBody.Append("name", "testName");
+            createAccountBody.Append("email", email);
+            createAccountBody.Append("password", password);
+            createAccountBody.Append("title", "Mr");
+            createAccountBody.Append("birth_date", "20");
+            createAccountBody.Append("birth_month", "June");
+            createAccountBody.Append("birth_year", "1993");
+            createAccountBody.Append("firstname", "testName");
+            createAccountBody.Append("lastname", "testLastName");
+            createAccountBody.Append("company", "testCompany");
+            createAccountBody.Append("address1", "testAddress1");
+            createAccountBody.Append("address2", "testAddress2");
+            createAccountBody.Append("country", "Canada");
+            createAccountBody.Append("zipcode", "123456");
+            createAccountBody.Append("state", "testState");
+            createAccountBody.Append("city", "testCity");
+            createAccountBody.Append("mobile_number", "1234567890");
+            await oneTimeContext.APIRequest.PostAsync("https://automationexercise.com/api/createAccount",
+                new() { Form = createAccountBody });
+        }
 
-            context = await browser.NewContextAsync(new BrowserNewContextOptions
+        [SetUp]
+        public async Task Setup()
+        {
+            string subPath = "../../../playwright/auth";
+            string filePath = "../../../playwright/auth/state.json";
+
+            if(!Directory.Exists(subPath))
+            {
+                Directory.CreateDirectory(subPath);
+            }
+
+            if(!File.Exists(filePath))
+            {
+                File.AppendAllText(filePath, "{}");
+            }
+
+            uiContext = await browser.NewContextAsync(new BrowserNewContextOptions
             {
                 ViewportSize = new ViewportSize
                 {
                     Width = 1920,
                     Height = 1080
-                }
+                },
+                StorageStatePath = "../../../playwright/auth/state.json"
             });
 
-            page = await context.NewPageAsync();
+            await uiContext.Tracing.StartAsync(new()
+            {
+                Title = $"{TestContext.CurrentContext.Test.ClassName}.{TestContext.CurrentContext.Test.Name}",
+                Screenshots = true,
+                Snapshots = true,
+                Sources = true
+            });
+
+            page = await uiContext.NewPageAsync();
+            var homePage = new HomePage(page);
+            await homePage.Open();
+            if(await homePage.GetLoginPageLocator().IsVisibleAsync()) 
+            {
+                await homePage.AcceptDataPolicy();
+                await homePage.Login(email, password);
+                
+                await uiContext.StorageStateAsync(new()
+                {
+                    Path = "../../../playwright/auth/state.json"
+                });
+            }
+            
+        }
+
+        [OneTimeTearDown]
+        public async Task DeleteAccountAndTeardown()
+        {
+            var deleteAccountBody = oneTimeContext.APIRequest.CreateFormData();
+            deleteAccountBody.Append("email", email);
+            deleteAccountBody.Append("password", password);
+            await oneTimeContext.APIRequest.DeleteAsync("https://automationexercise.com/api/deleteAccount",
+                new() { Form = deleteAccountBody });
+            await browser.CloseAsync();
         }
 
         [TearDown]
         public async Task Teardown()
         {
+            await uiContext.Tracing.StopAsync(new()
+            {
+                Path = Path.Combine(
+                TestContext.CurrentContext.WorkDirectory,
+                "playwright-traces",
+                $"{TestContext.CurrentContext.Test.ClassName}.{TestContext.CurrentContext.Test.Name}.zip"
+            )
+            });
             await page.CloseAsync();
-            await browser.CloseAsync();
         }
     }
 }
